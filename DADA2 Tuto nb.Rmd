@@ -1,0 +1,56 @@
+---
+title: "DADA2 Tuto nb"
+output: html_notebook
+---
+
+```{r}
+library(dada2)
+```
+
+```{r}
+install.packages("Rcpp")
+```
+```{r}
+library(dada2)
+```
+
+```{r}
+packageVersion("dada2")
+```
+
+```{r}
+path<- "/home/rstudio/DADA2/MiSeq_SOP"
+```
+
+```{r}
+path
+```
+
+```{r}
+list.files(path)
+```
+
+```{r}
+fnFs<-sort(list.files(path, pattern="_R1_001.fastq", full.names=TRUE))
+fnFs
+```
+
+```{r}
+fnRs<-sort(list.files(path, pattern="_R2_001.fastq",full.names=TRUE))
+fnRs
+```
+
+```{r}
+sample.names<-sapply(strsplit(basename(fnFs),"_"),`[`, 1)
+sample.names<-sapply(strsplit(basename(fnRs),"_"),`[`, 1)
+sample.names
+```
+
+```{r}
+plotQualityProfile(fnFs[1:2])
+```
+
+```{r}
+plotQualityProfile(fnRs[1:2])
+```
+
