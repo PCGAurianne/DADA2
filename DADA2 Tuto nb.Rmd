@@ -177,7 +177,7 @@ ps<-prune_samples(sample_names(ps)!="Mock",ps)
 dna<-Biostrings::DNAStringSet(taxa_names(ps))
 
 names(dna) <- taxa_names(ps)
-
+ 
 ps <- merge_phyloseq(ps, dna)
 
 taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
