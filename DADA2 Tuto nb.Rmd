@@ -151,7 +151,7 @@ gender <- substr(subject,1,1)
 
 subject <- substr(subject,2,999)
 
-day <- as.integer(sapply(strsplit(samples.out, "D"), `[`, 2))
+day <- as.integer(sapply(strsplit(sample.names, "D"), `[`, 2))
 
 samdf <- data.frame(Subject=subject, Gender=gender, Day=day)
 
@@ -165,13 +165,16 @@ rownames(samdf) <- samples.out
 
 
 ```{r}
-ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), sample_data(samdf),tax_table(taxa))
 
-ps <- prune_samples(sample_names(ps) != "Mock", ps)
+ps<-phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), 
+               sample_data(samdf), 
+               tax_table(taxa),prune_samples(sample_names(ps)))
+
+ps<-prune_samples(sample_names(ps)!="Mock",ps)
 ```
 
 ```{r}
-dna <- Biostrings::DNAStringSet(taxa_names(ps))
+dna<-Biostrings::DNAStringSet(taxa_names(ps))
 
 names(dna) <- taxa_names(ps)
 
@@ -187,14 +190,13 @@ plot_richness(ps, x="Day", measures=c("Shannon", "Simpson"), color="When")
 ```
 
 ```{r}
-ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
+ps.prop<-transform_sample_counts(ps,function(otu)otu/sum(otu))
 
-ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")
+ord.nmds.bray<- ordinate(ps.prop, method="NMDS", distance="bray")
 ```
 
 ```{r}
 plot_ordination(ps.prop, ord.nmds.bray, color="When", title="Bray NMDS")
-
 ```
 
 ```{r}
