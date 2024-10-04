@@ -1,9 +1,10 @@
 ---
 title: "DADA2 Tuto nb"
-output: htlm_notebook
+output: htlm_document
 ---
 
-##Installer et faire apparaitre en tête le package DADA2.
+## Installer et faire apparaitre en tête le package DADA2.
+
 ```{r}
 install.packages("Rcpp")
 library(dada2)
@@ -11,6 +12,7 @@ packageVersion("dada2")
 ```
 
 Ici, on cherche à créer le vecteur path qui contiendra l'ensemble des fichiers de séquence sur lesquels travailler.
+
 ```{r}
 path<- "/home/rstudio/DADA2/MiSeq_SOP"
 print(path)
@@ -18,6 +20,7 @@ list.files(path)
 ```
 
 Dans deux vecteurs différents, on assigne respectivement l'ensemble des sequences forward (fnFs) et reverse (fnRs).
+
 ```{r}
 fnFs<-sort(list.files(path, pattern="_R1_001.fastq", full.names=TRUE))
 print(fnFs)
@@ -25,48 +28,59 @@ fnRs<-sort(list.files(path, pattern="_R2_001.fastq",full.names=TRUE))
 print(fnRs)
 ```
 
-Le vecteur "sample.names" sera défini comme les noms des échantillons selon la première partie du nom de fichier si on considère le caractère "_" comme séparateur. Ainsi on a : F3D0_s188_L001_R1_001.fastq aura le nom F3D0.
+Le vecteur "sample.names" sera défini comme les noms des échantillons selon la première partie du nom de fichier si on considère le caractère "\_" comme séparateur.
+Ainsi on a : F3D0_s188_L001_R1_001.fastq aura le nom F3D0.
+
 ```{r}
 sample.names<-sapply(strsplit(basename(fnFs),"_"),`[`, 1)
 sample.names
 ```
 
-##Profil de qualité des séquences
+## Profil de qualité des séquences
 
 Ces graphiques présente les scores de qualité pour l'ensemble des bases des séquences 1 et 2 Forward et reverse.
+
 ```{r}
 plotQualityProfile(fnFs[1:2])
 plotQualityProfile(fnRs[1:2])
 ```
-#Filtrer les séquences.
+
+# Filtrer les séquences.
 
 L'objectif de cette partie est de supprimer les séquences de mauvaise qualité identifiées grâce aux graphiques précedents.
-On créé donc deux nouveaux vecteurs de séquences filtrées (filtF/Rs) en y assignant le chemin pour aller jusqu'aux fichiers de séquences dans le dossier "filtered" et assignant comme nom d'échantillons les noms utiliser dans la variable "sample.names" suivi de la précision "_f/R_filt.fastq.gz" pour identifier les séquences filtrées.
+On créé donc deux nouveaux vecteurs de séquences filtrées (filtF/Rs) en y assignant le chemin pour aller jusqu'aux fichiers de séquences dans le dossier "filtered" et assignant comme nom d'échantillons les noms utiliser dans la variable "sample.names" suivi de la précision "\_f/R_filt.fastq.gz" pour identifier les séquences filtrées.
+
 ```{r}
 filtFs<-file.path(path,"filtered",paste0(sample.names,"_F_filt.fastq.gz"))
 filtRs<-file.path(path,"filtered",paste0(sample.names,"_R_filt.fastq.gz"))
 ```
 
-La fonction suivante permettra de réunir dans un seul vecteur les parametres de filtre. Ainsi pour les fichier fnF/Rs et filtF/Rs, on va couper les séquences après 240pb pour les seq F, et 160pb pour les seq R, qui permet toujours un chevauchement des 2 séquences pour les aligner tout en éliminant les pb de mauvaises qualité aux extrémités des séquences. MaxN/EE et truncQ sont des valeurs standards, rm.phix permet de supprimer les séquences du gène phagique phi X ajouter avant séquençage.
+La fonction suivante permettra de réunir dans un seul vecteur les parametres de filtre.
+Ainsi pour les fichier fnF/Rs et filtF/Rs, on va couper les séquences après 240pb pour les seq F, et 160pb pour les seq R, qui permet toujours un chevauchement des 2 séquences pour les aligner tout en éliminant les pb de mauvaises qualité aux extrémités des séquences.
+MaxN/EE et truncQ sont des valeurs standards, rm.phix permet de supprimer les séquences du gène phagique phi X ajouter avant séquençage.
+
 ```{r}
 out<-filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(240,160),maxN=0,maxEE=c(2,2),truncQ=2,rm.phix=TRUE,compress=TRUE,multithread=TRUE)
 ```
 
 La fonction "head" permet de comparé le nombre de séquence avant et après filtration des séquences.
+
 ```{r}
 head(out)
 ```
 
-##Apprendre les erreurs.
+## Apprendre les erreurs.
 
 Le but de ce vecteur est d'évaluer les taux d'erreurs de séquençage.
 On assigne aux deux fonctions suivantes d'apprendre des erreurs sur les séquences F et R.
+
 ```{r}
 errF<-learnErrors(filtFs, multithread=TRUE)
 errR<-learnErrors(filtRs, multithread=TRUE)
 ```
 
 Cela permet par la suite d'établir des graphiques d'estimation du taux d'erreur en fonction de la base à partir du jeu de données.
+
 ```{r}
 plotErrors(errF,nominalQ=TRUE)
 ```
@@ -76,43 +90,51 @@ plotErrors(errF,nominalQ=TRUE)
 Cette étape permet d'identifier les séquences uniques parmis l'ensemble des échantillons.
 
 Le vecteur dadaF/Rs sera assigné par la fonction dada qui permet de supprimer les erreurs de séquençage des fichier de séquences filtrées en applicant le taux d'erreur appris précédemment.
+
 ```{r}
 dadaFs<-dada(filtFs, err=errF, multithread=TRUE)
 dadaRs<-dada(filtRs, err=errR, multithread=TRUE)
 ```
 
 La fonction suivante permet d'afficher le nombre de séquences uniques identifiées ainsi que le nombre de variants identifiés parmis ces séquences uniques pour un échantillon.
+
 ```{r}
 dadaFs[[16]]
 ```
 
-##Rassembler les séquences.
+## Rassembler les séquences.
 
 Ici, la fonction mergePairs est assigné au vecteur mergers dans le but de rassembler l'ensemble des séquences dans un tableau et de les comparés.
+
 ```{r}
 mergers<-mergePairs(dadaFs,filtFs,dadaRs,filtRs, verbose=TRUE)
 head(mergers[[1]])
 ```
 
-##Construction de la table de séquence.
+## Construction de la table de séquence.
 
 Les lignes de commandes suivantes permettent de réaliser un tableau de séquences décrivant le nombre de lignes et de colonnes (dim) et la distributions des longueurs des séquences.
+
 ```{r}
 seqtab<-makeSequenceTable(mergers)
 dim(seqtab)
 table(nchar(getSequences(seqtab)))
 ```
-##Suppression des séquences chimères.
+
+## Suppression des séquences chimères.
 
 L'objectif de ces fonctions est d'assigner au tableau "seqtab.nochim" l'ensemble des séquences considérées comme non-chimériques par comparaison de l'ensemble des séquences du séquençage effectué et d'en décrire le nombre de ligne et de colonne.
+
 ```{r}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
 dim(seqtab.nochim)
 sum(seqtab.nochim)/sum(seqtab)
 ```
-##Résumé du nombre de séquences à chacune des étapes.
+
+## Résumé du nombre de séquences à chacune des étapes.
 
 Les fonctions suivantes permettent de présenter un tableau présentant le nombre de séquences retenues à chaque étape (données brutes, filtration, suppression des chimères, ...)
+
 ```{r}
 getN <- function(x) sum(getUniques(x))
 track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
@@ -120,23 +142,30 @@ colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "n
 rownames(track) <- sample.names
 head(track)
 ```
-##Assignement des taxonomies.
 
-Grâce à la base de données Silva v132, il est possible d'assigner des taxonomies aux séquences retenues. Ces taxonomies sont assignées au vecteur "Taxa" à partir de la table de séquences non chimériques.
+## Assignement des taxonomies.
+
+Grâce à la base de données Silva v132, il est possible d'assigner des taxonomies aux séquences retenues.
+Ces taxonomies sont assignées au vecteur "Taxa" à partir de la table de séquences non chimériques.
+
 ```{r}
 taxa <- assignTaxonomy(seqtab.nochim, "~/DADA2/silva_nr_v132_train_set.fa.gz", multithread=TRUE)
 ```
 
 Cela permet par la suite d'identifier et de présenter dans une table le taxon retrouvés dans les échantillons.
+
 ```{r}
 taxa.print<-taxa
 rownames(taxa.print)<-NULL
 head(taxa.print)
 ```
-##Evaluer la précision.
+
+## Evaluer la précision.
 
 Afin d'évaluer la précision, il faut utiliser l'échantillon Mock ajouté à composition et concentration connue, dont on ajoute les séquences à partir de la table seqtab.nochim au vecteur unqs.mock.
-Par la suite, on trie les séquences (sort) du vecteur unqs.mock suivant la longueur des séquences qu'il contient. La fonction "cat" permet d'afficher le résultat du nombre de séquences de l'échantillon Mock.
+Par la suite, on trie les séquences (sort) du vecteur unqs.mock suivant la longueur des séquences qu'il contient.
+La fonction "cat" permet d'afficher le résultat du nombre de séquences de l'échantillon Mock.
+
 ```{r}
 unqs.mock<-seqtab.nochim["Mock_F_filt.fastq.gz",]
 
@@ -144,8 +173,11 @@ unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE)
 
 cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
 ```
+
 On créé par la suite un vecteur de référence de l'échantillon Mock avec le fichier contenant l'ensemble des séquences qui doivent être retrouvées (HMP_MOCK.v35.fasta).
-La fonction match.ref permet de comparer l'échantillon de référence Mock (mock.ref) avec l'échantillon mock séquencé. La fonction "cat" permet d'afficher la somme des séquences de l'échantillon Mock concordante avec l'échantillon de reférence (mock.ref).
+La fonction match.ref permet de comparer l'échantillon de référence Mock (mock.ref) avec l'échantillon mock séquencé.
+La fonction "cat" permet d'afficher la somme des séquences de l'échantillon Mock concordante avec l'échantillon de reférence (mock.ref).
+
 ```{r}
 mock.ref<-getSequences(file.path(path, "HMP_MOCK.v35.fasta"))
 
@@ -153,7 +185,8 @@ match.ref<-sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
 
 cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
 ```
-##Utilisation de Phyloseq.
+
+## Utilisation de Phyloseq.
 
 ```{r}
 library(phyloseq)
@@ -162,9 +195,10 @@ library(ggplot2)
 theme_set(theme_bw())
 ```
 
-##Construction d'un tableau de données.
+## Construction d'un tableau de données.
 
 Ici, il faut créer un tableau de données présentant le nom, le genre, et le jour de chacun des échantillons.
+
 ```{r}
 samples.out <- rownames(seqtab.nochim)
 
@@ -187,6 +221,7 @@ rownames(samdf) <- samples.out
 
 Par la suite, il faut créer une table d'OTU grâce aux séquences qui sera enregistré dans un dossier phyloseq de stockage.
 On supprime aussi les séquences de l'échantillon Mock afin de réaliser des analyses seulement sur les échantillons de composition inconnue.
+
 ```{r}
 ps<-phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), 
                sample_data(samdf), 
@@ -195,9 +230,12 @@ ps<-phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE),
 ps<-prune_samples(sample_names(ps) !="Mock_F_filt.fastq.gz",ps)
 ps
 ```
-Les commandes usivantes servent à raccourcir le nom des séquences pour faciliter l'interprétation. Il faudra donc stocker les séquences dans un dossier (ici "dna") dotn les noms seront les mêmes que ceux utilisé dans la table d'OTU (ce seront les séquences entières). 
+
+Les commandes usivantes servent à raccourcir le nom des séquences pour faciliter l'interprétation.
+Il faudra donc stocker les séquences dans un dossier (ici "dna") dotn les noms seront les mêmes que ceux utilisé dans la table d'OTU (ce seront les séquences entières).
 On assignera à ps un nom court pour chaque séquence grâce à la fonction merge_phyloseq (correspondance des noms/séquences entre ps et dna).
 Les noms taxonomiques de ps seront des séquences générées en fonction des taxonomies assignées à ps.
+
 ```{r}
 dna<-Biostrings::DNAStringSet(taxa_names(ps))
 
@@ -210,10 +248,11 @@ taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
 print(ps)
 ```
 
-##Analyse des différences entre les échantillons prélevés à t<100jours VS t>100jours.
+## Analyse des différences entre les échantillons prélevés à t\<100jours VS t\>100jours.
 
-Les graphiques suivant décrivent la diversité alpha des communautés en fonction du jour ou à été prélevé l'échantillon (<100 jours VS >100 jours).
-On distingue une plus faible diversité des communautés dans les échantillons prélevés à t>100jours mais ces communautés reste plus similaires que celles à t<100jours qui restent différentes (points éparpillés).
+Les graphiques suivant décrivent la diversité alpha des communautés en fonction du jour ou à été prélevé l'échantillon (\<100 jours VS \>100 jours).
+On distingue une plus faible diversité des communautés dans les échantillons prélevés à t\>100jours mais ces communautés reste plus similaires que celles à t\<100jours qui restent différentes (points éparpillés).
+
 ```{r}
 plot_richness(ps, x="Day", measures=c("Shannon", "Simpson"), color="When")
 ```
@@ -224,11 +263,16 @@ ps.prop<-transform_sample_counts(ps,function(otu)otu/sum(otu))
 ord.nmds.bray<- ordinate(ps.prop, method="NMDS", distance="bray")
 ```
 
-Le graphique d'ordination ci-dessous permet d'identifier une corrélation entre la plupart des échantillons prélevés à t<100jours mais aussi entre les échantillons prélevés à t>100jours. On observe aussi une séparation entre les deux temps de prélèvement.
+Le graphique d'ordination ci-dessous permet d'identifier une corrélation entre la plupart des échantillons prélevés à t\<100jours mais aussi entre les échantillons prélevés à t\>100jours.
+On observe aussi une séparation entre les deux temps de prélèvement.
+
 ```{r}
 plot_ordination(ps.prop, ord.nmds.bray, color="When", title="Bray NMDS")
 ```
-Les bar plots suivant décrivent les différentes familles bactériennes identifiés dans les échantillons <100 jours et >100 jours. Pour tous les échantillons, on retrouve majoritairement la famille des Muribaculaceae.
+
+Les bar plots suivant décrivent les différentes familles bactériennes identifiés dans les échantillons \<100 jours et \>100 jours.
+Pour tous les échantillons, on retrouve majoritairement la famille des Muribaculaceae.
+
 ```{r}
 top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
 
